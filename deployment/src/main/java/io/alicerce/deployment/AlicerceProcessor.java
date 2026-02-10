@@ -1,7 +1,8 @@
 package io.alicerce.deployment;
 
 import io.alicerce.core.PagePath;
-import io.alicerce.runtime.PagePathRecorder;
+import io.alicerce.runtime.AlicerceRecorder;
+import io.alicerce.utils.Utils;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -30,26 +31,34 @@ class AlicerceProcessor {
     @Record(ExecutionTime.STATIC_INIT)
     void processConfiguration(
             AlicerceConfig config,
-            PagePathRecorder recorder,
+            AlicerceRecorder recorder,
             BuildProducer<SyntheticBeanBuildItem> syntheticBeanProducer) {
+
+        buildPagePath(config, recorder, syntheticBeanProducer);
+        buildMessagesByLanguage(config, recorder, syntheticBeanProducer);
+    }
+
+    void buildPagePath(
+            AlicerceConfig config,
+            AlicerceRecorder recorder,
+            BuildProducer<SyntheticBeanBuildItem> producer) {
 
         var pathList = new ArrayList<>(FRAMEWORK_PATHS);
         config.pagePaths().ifPresent(pathList::addAll);
-        var splitted = pathList.stream().map(AlicerceProcessor::split).toList();
-
-        syntheticBeanProducer.produce(SyntheticBeanBuildItem.configure(PagePath.class)
-                .supplier(recorder.buildPagePath(splitted))
+        var splitted = pathList
+                .stream()
+                .map(Utils::splitPath)
+                .toList();
+        producer.produce(SyntheticBeanBuildItem.configure(PagePath.class)
+                .supplier(recorder.createPagePath(splitted))
                 .scope(Singleton.class)
                 .unremovable()
                 .done());
     }
 
-    static String[] split(String path) {
-        path = path.trim();
-        while (path.startsWith("/"))
-            path = path.substring(1);
-        while (path.endsWith("/"))
-            path = path.substring(0, path.length() - 1);
-        return path.split("/");
+    void buildMessagesByLanguage(
+            AlicerceConfig config,
+            AlicerceRecorder recorder,
+            BuildProducer<SyntheticBeanBuildItem> producer) {
     }
 }
