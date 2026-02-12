@@ -1,8 +1,10 @@
 package io.alicerce.deployment;
 
 import io.alicerce.core.I18n;
-import io.alicerce.core.PagePath;
+import io.alicerce.core.MessagesProvider;
+import io.alicerce.core.Paths;
 import io.alicerce.runtime.AlicerceRecorder;
+import io.alicerce.ui.Menu;
 import io.alicerce.ui.UI;
 import io.alicerce.utils.Utils;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -39,38 +41,47 @@ class AlicerceProcessor {
 
     @BuildStep
     @Record(ExecutionTime.STATIC_INIT)
-    void build(
+    void buildStaticInit(
             AlicerceConfig config,
             AlicerceRecorder recorder,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeanProducer,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeanProducer) {
+            BuildProducer<AdditionalBeanBuildItem> additionalProducer,
+            BuildProducer<SyntheticBeanBuildItem> syntheticProducer) {
 
-        buildPagePath(config, recorder, syntheticBeanProducer);
-        buildMessagesByLanguage(config, recorder, syntheticBeanProducer);
-
-        produceAdditionalBeans(additionalBeanProducer);
+        var pathsArray = producePaths(config, recorder, syntheticProducer);
+        produceSyntheticBean(syntheticProducer, Menu.class, recorder.supplierMenu(pathsArray), APPLICATION);
+        produceMessagesProvider(config, recorder, syntheticProducer);
+        produceAdditionalBeans(additionalProducer);
     }
 
-    void buildPagePath(
+    List<String[]> producePaths(
             AlicerceConfig config,
             AlicerceRecorder recorder,
             BuildProducer<SyntheticBeanBuildItem> producer) {
-
-        var list = new ArrayList<>(FRAMEWORK_PATHS);
-        config
-                .pagePaths()
-                .ifPresent(list::addAll);
-        var paths = list
+        var configPaths = config.paths().isEmpty()
+                ? List.of("")
+                : config.paths().get();
+        var pathsArray = Utils
+                .concat(FRAMEWORK_PATHS)
+                .concat(configPaths)
                 .stream()
                 .map(Utils::splitPath)
                 .toList();
-        produceSyntheticBean(producer, PagePath.class, recorder.createPagePath(paths), APPLICATION);
+        produceSyntheticBean(producer, Paths.class, recorder.supplierPaths(pathsArray), APPLICATION);
+        return pathsArray;
     }
 
-    void buildMessagesByLanguage(
+    void produceMessagesProvider(
             AlicerceConfig config,
             AlicerceRecorder recorder,
             BuildProducer<SyntheticBeanBuildItem> producer) {
+        var languages = new ArrayList<String>();
+        var baseNames = new ArrayList<String>();
+        config.i18n().ifPresent(i18n -> {
+            languages.addAll(i18n.languages());
+            baseNames.addAll(i18n.baseNames());
+        });
+        var supplier = recorder.supplierMessagesProvider(languages, baseNames);
+        produceSyntheticBean(producer, MessagesProvider.class, supplier, APPLICATION);
     }
 
     void produceAdditionalBeans(BuildProducer<AdditionalBeanBuildItem> producer) {
@@ -82,12 +93,12 @@ class AlicerceProcessor {
     void produceAdditionalBean(
             BuildProducer<AdditionalBeanBuildItem> producer,
             Class<?> beanClass,
-            Class<?> defaultScopeClass) {
-
+            Class<?> scopeClass) {
         var additionalBean = AdditionalBeanBuildItem
                 .builder()
                 .addBeanClass(beanClass)
-                .setDefaultScope(DotName.createSimple(defaultScopeClass))
+                .setDefaultScope(DotName.createSimple(scopeClass))
+                .setUnremovable()
                 .build();
         producer.produce(additionalBean);
     }
@@ -97,8 +108,8 @@ class AlicerceProcessor {
             Class<?> implClass,
             Supplier<?> beanSupplier,
             Class<? extends Annotation> scopeClass) {
-
-        var syntheticBean = SyntheticBeanBuildItem.configure(implClass)
+        var syntheticBean = SyntheticBeanBuildItem
+                .configure(implClass)
                 .supplier(beanSupplier)
                 .scope(scopeClass)
                 .unremovable()

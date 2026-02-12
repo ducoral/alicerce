@@ -21,7 +21,7 @@ public interface AlicerceConfig {
     /**
      * List of application page paths
      */
-    Optional<List<String>> pagePaths();
+    Optional<List<String>> paths();
 
     /**
      * Configure internationalization.
@@ -33,6 +33,7 @@ public interface AlicerceConfig {
         /**
          *  List of languages supported by the application.
          */
+        @WithDefault("")
         List<String> languages();
 
         /**

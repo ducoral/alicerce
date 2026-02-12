@@ -1,16 +1,17 @@
 package io.alicerce.core;
 
+import io.alicerce.Messages;
 import io.quarkus.qute.TemplateData;
 
 import java.text.MessageFormat;
 import java.util.Map;
 
 @TemplateData
-public class Messages {
+public class MessagesData implements Messages {
 
     private final Map<String, String> map;
 
-    Messages(Map<String, String> map) {
+    MessagesData(Map<String, String> map) {
         this.map = map;
     }
 

@@ -1,9 +1,10 @@
+{@io.alicerce.Messages msg}
 {@String param}
 <html lang="en">
 <header>
     {#bundle /}
 </header>
 <body>
-<h1>Página legal com parâmetro: {param}</h1>
+<p>Página legal com parâmetro: {param} - msg: {msg.msg('label.test')}</p>
 </body>
 </html>
