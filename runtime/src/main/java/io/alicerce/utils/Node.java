@@ -12,16 +12,16 @@ public class Node {
 
     private final List<Node> nodes = new ArrayList<>();
 
-    public Node(String code, int depth) {
+    private Node(String code, int depth) {
         this.code = code;
         this.depth = depth;
     }
 
-    public static List<Node> of(List<String[]> pathsArray) {
-        var nodes = new ArrayList<Node>();
+    public static Node of(List<String[]> pathsArray) {
+        var node = new Node("root", 0);
         for (var path : pathsArray)
-            parsePath(nodes, path, 0);
-        return nodes;
+            parsePath(node.nodes, path, 0);
+        return node;
     }
 
     public static Node find(List<Node> nodes, String code) {
@@ -72,8 +72,10 @@ public class Node {
             return;
         var code = path[index];
         var node = find(nodes, code);
-        if (node == null)
-            nodes.add(node = new Node(code, index));
+        if (node == null) {
+            var depth = index + 1;
+            nodes.add(node = new Node(code, depth));
+        }
         parsePath(node.nodes, path, index + 1);
     }
 }

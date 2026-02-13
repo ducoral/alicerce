@@ -23,6 +23,6 @@ public class AlicerceResource extends Resource implements CoolFeature {
     @Override
     protected TemplateInstance getTemplate() {
         Log.info("\n" + menu);
-        return UI.hello();
+        return UI.hello().data("menu", menu);
     }
 }
